@@ -173,11 +173,21 @@ function spawnBalloons() {
 
 let micContext, analyser, micStream;
 let candleBlown = false;
+let micRequesting = false;
 let blowFrames = 0;
+let micReadyAt = 0;
+let baselineSamples = [];
+let micBaseline = 0;
+let micCalibrated = false;
 
 function initCandlePhase() {
   candleBlown = false;
+  micRequesting = false;
   blowFrames = 0;
+  baselineSamples = [];
+  micBaseline = 0;
+  micCalibrated = false;
+
   document.getElementById('phrase-popup').classList.remove('visible');
   gsap.to('#party-stage', {
     opacity: 0,
@@ -190,6 +200,9 @@ function initCandlePhase() {
         { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "elastic.out(1, 0.75)" }
       );
 
+      // Baja suavemente la música para que el altavoz no dispare el micrófono
+      try { gsap.to(bgMusic, { volume: 0.12, duration: 0.8 }); } catch (e) {}
+
       const tapArea = document.getElementById('candle-tap-area');
       if (tapArea) tapArea.onclick = blowOutCandle;
 
@@ -199,51 +212,55 @@ function initCandlePhase() {
         micBtn.onclick = () => requestMicAccess(true);
       }
 
-      // Intento automático inmediato de pedir permiso al entrar a la velita
       requestMicAccess(false);
     }
   });
 }
 
 async function requestMicAccess(fromUserClick = false) {
-  if (candleBlown) return;
+  if (candleBlown || micRequesting || micStream) return;
   const status = document.getElementById('mic-status');
   const micBtn = document.getElementById('enable-mic-btn');
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    if (fromUserClick) {
-      status.textContent = "Este enlace local no permite micrófono; toca la llamita para pedir tu deseo ✨";
-      if (micBtn) micBtn.classList.add('hidden');
-    } else {
-      status.textContent = "Toca el botón o la llamita para pedir tu deseo ✨";
-    }
+    status.textContent = "Toca la llamita para pedir tu deseo ✨";
+    if (micBtn) micBtn.classList.add('hidden');
     return;
   }
 
+  micRequesting = true;
   status.textContent = "Solicitando permiso al micrófono... 🎙️";
   try {
-    if (micStream) {
-      micStream.getTracks().forEach(t => t.stop());
-    }
+    // echoCancellation ignora la música del altavoz; noiseSuppression: false conserva el aire del soplido
     micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false }
     });
-    status.textContent = "¡Micrófono listo! Acércate y sopla fuerte 🌬️";
-    status.style.color = "#0099cc";
+
     if (micBtn) micBtn.classList.add('hidden');
+    status.textContent = "Calibrando velita mágica... ✨";
+    status.style.color = "#ff2a85";
 
     micContext = new (window.AudioContext || window.webkitAudioContext)();
     if (micContext.state === 'suspended') await micContext.resume();
     analyser = micContext.createAnalyser();
     analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.4;
     const src = micContext.createMediaStreamSource(micStream);
     src.connect(analyser);
+
+    // 1.1s de espera: 500ms ignora el clic de encendido + 600ms mide el ruido ambiente real
+    baselineSamples = [];
+    micCalibrated = false;
+    blowFrames = 0;
+    micReadyAt = performance.now() + 1100;
     checkBlow();
   } catch (e) {
     status.textContent = fromUserClick
       ? "Permiso no activado. ¡Toca la llamita para apagar la vela! ✨"
       : "Pulsa 'Activar micrófono' para soplar tu velita 🎙️";
     if (micBtn) micBtn.classList.remove('hidden');
+  } finally {
+    micRequesting = false;
   }
 }
 
@@ -252,26 +269,59 @@ function checkBlow() {
   const data = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(data);
 
-  // El soplido en micrófonos de celular concentra energía en las bandas bajas (0..35)
   let lowSum = 0;
-  const bins = 36;
+  const bins = 32;
   for (let i = 0; i < bins; i++) lowSum += data[i];
   const lowAvg = lowSum / bins;
 
-  const flame = document.getElementById('candle-flame');
-  if (lowAvg > 38 && flame) {
-    flame.style.transform = `scale(${0.85 + Math.random() * 0.3}) skewX(${(Math.random() - 0.5) * 28}deg)`;
+  const now = performance.now();
+
+  // Fase 1: ignorar chasquido inicial del hardware (primeros 500ms)
+  if (now < micReadyAt - 600) {
+    requestAnimationFrame(checkBlow);
+    return;
   }
 
-  if (lowAvg > 58) {
+  // Fase 2: medir línea base ambiental durante 600ms
+  if (now < micReadyAt) {
+    baselineSamples.push(lowAvg);
+    requestAnimationFrame(checkBlow);
+    return;
+  }
+
+  // Fase 3: fijar línea base y habilitar detección
+  if (!micCalibrated) {
+    micCalibrated = true;
+    micBaseline = baselineSamples.length
+      ? baselineSamples.reduce((a, b) => a + b, 0) / baselineSamples.length
+      : 35;
+    const status = document.getElementById('mic-status');
+    status.textContent = "¡Listo! Acércate y sopla fuerte 🌬️";
+    status.style.color = "#0099cc";
+  }
+
+  const flickerThreshold = Math.max(65, micBaseline + 22);
+  const blowThreshold = Math.min(205, Math.max(98, micBaseline + 45));
+  const flame = document.getElementById('candle-flame');
+
+  if (flame) {
+    if (lowAvg > flickerThreshold) {
+      flame.style.transform = `scale(${0.8 + Math.random() * 0.35}) skewX(${(Math.random() - 0.5) * 32}deg)`;
+    } else {
+      flame.style.transform = '';
+    }
+  }
+
+  if (lowAvg > blowThreshold) {
     blowFrames++;
-    if (blowFrames >= 4) {
+    if (blowFrames >= 12) {
       blowOutCandle();
       return;
     }
   } else {
     blowFrames = Math.max(0, blowFrames - 1);
   }
+
   requestAnimationFrame(checkBlow);
 }
 
@@ -289,9 +339,15 @@ function blowOutCandle() {
   }
   analyser = null;
 
+  // Restaura el volumen original de la música para la carta final
+  try { gsap.to(bgMusic, { volume: 0.4, duration: 0.8 }); } catch (e) {}
+
   if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
   const flame = document.getElementById('candle-flame');
-  if (flame) flame.classList.add('blown-out');
+  if (flame) {
+    flame.style.transform = '';
+    flame.classList.add('blown-out');
+  }
   const micBtn = document.getElementById('enable-mic-btn');
   if (micBtn) micBtn.classList.add('hidden');
   document.getElementById('mic-status').textContent = "¡Deseo concedido! ✨";
