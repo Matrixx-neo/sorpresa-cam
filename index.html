@@ -1,0 +1,105 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorpresa para Camila ✨</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode">
+  <div id="unlock-screen">
+    <button id="unlock-btn" class="unlock-btn">Toca para comenzar ✨</button>
+  </div>
+  <canvas id="fairy-dust-canvas"></canvas>
+
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- FASE 0: Falsa Notificación iOS -->
+  <div id="ios-notification" class="ios-alert glass-panel hidden">
+    <img id="noti-img" src="" alt="Pinkie" class="noti-avatar" />
+    <div class="noti-text">
+      <h3>Mensaje Nuevo 💬</h3>
+      <p>Pinkie Pie te ha enviado algo especial. ¡Toca para abrir!</p>
+    </div>
+  </div>
+
+  <!-- REPRODUCTOR GLASS-POD -->
+  <div id="glass-pod" class="glass-pod hidden">
+    <div class="eq-bars">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </div>
+    <span class="song-title">Cupid (TwinVer.) - FIFTY FIFTY</span>
+  </div>
+  <audio id="bg-music" src="assets/cancion.mp3" preload="auto" loop></audio>
+
+  <!-- FASE 1: Inicio -->
+  <section id="intro-screen" class="screen">
+    <div class="intro-wrapper">
+      <div class="peek-container">
+        <img id="pinkie-peek" class="sprite-peek" src="" alt="Pinkie Peek" />
+      </div>
+      <div class="glass-panel intro-card" id="intro-card-tilt">
+        <div class="status-badge"><span class="pulse-dot"></span> SISTEMA SORPRESA LISTO</div>
+        <h1 class="cyber-title">¿Hay alguien ahí?</h1>
+        <p class="subtitle">Se ha detectado un cumpleaños muy especial. Presiona el cañón para iniciar la secuencia.</p>
+        <button id="start-btn" class="cannon-btn">
+          <img id="btn-cannon-img" src="" alt="Cañón" class="cannon-icon" />
+          <span>¡DISPARAR CAÑÓN!</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FASE 2 y 3: Globos -->
+  <section id="party-stage" class="screen">
+    <div class="hud-counter glass-pill">Globos mágicos: <span id="balloon-count">0</span> / 4</div>
+    <img id="pinkie-jumper" class="sprite-jumper" src="" alt="Pinkie saltando" />
+    <div id="balloons-container"></div>
+    <div id="phrase-popup" class="glass-panel phrase-card tilt-card">
+      <img id="phrase-img" src="" alt="Reacción" />
+      <div class="phrase-title-wrap">
+        <h2 id="phrase-text"></h2>
+        <img id="phrase-emoji" class="ios-emoji-lg" src="" alt="" />
+      </div>
+    </div>
+  </section>
+
+  <!-- FASE 3.5: Soplar Vela -->
+  <section id="candle-screen" class="screen">
+    <div class="glass-panel candle-card">
+  <div class="candle-img-wrapper" id="candle-tap-area">
+    <img id="candle-img" src="" alt="Pinkie Pastel" />
+    <div id="candle-flame" class="flame"></div>
+  </div>
+  <h2 class="candle-title">¡Pide un deseo y sopla!</h2>
+  <p class="candle-hint">Sopla fuerte hacia el micrófono de tu celular para apagar la velita mágica 🌬️🕯️</p>
+  <div id="mic-status" class="mic-status">Activa el micrófono para soplar tu velita ✨</div>
+  <button id="enable-mic-btn" class="neon-btn mic-btn">🎙️ Activar micrófono</button>
+  <p class="candle-fallback">O toca la llamita si no puedes soplar ahora</p>
+</div>
+  </section>
+
+  <!-- FASE 4: Gran Final -->
+  <section id="final-screen" class="screen">
+    <div class="glass-panel letter-card">
+      <div class="letter-header">
+  <img id="hb-sticker" src="" alt="Happy Birthday" class="hb-sticker" />
+  <img id="final-pinkie" src="" alt="Princesa" />
+  <h2 class="birthday-cam-title">¡Para Cam! <img class="ios-emoji-sm" src="https://em-content.zobj.net/source/apple/391/sparkles_2728.png" alt="✨" /></h2>
+</div>
+      <div class="letter-body">
+        <p id="typewriter-text"></p>
+      </div>
+      <button id="replay-confetti" class="neon-btn secondary-btn">
+        <img class="ios-emoji" src="https://em-content.zobj.net/source/apple/391/confetti-ball_1f38a.png" alt="🎊" />
+        <span>¡Más Confeti!</span>
+      </button>
+    </div>
+  </section>
+  <script src="script.js"></script>
+</body>
+</html>
